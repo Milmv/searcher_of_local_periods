@@ -1,46 +1,14 @@
-from flask import Flask, render_template, request, redirect, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, redirect
 
 from services import change_date_to_datetime, change_datetime_to_unix, array_from_unix_range, \
     attribute_array_from_dictionary, datetime_array_from_unix_array, delete_duplicates, get_union_range, \
     array_of_uncontained
 
+from models import db, Period, Entity, Period_entity
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.sqlite'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-
-class Entity(db.Model):
-    tablename = 'Entity'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, unique=True, comment='ID сущности')
-    name = db.Column(db.String(256), comment='Название сущности')
-    type = db.Column(db.Integer, comment='Тип')
-
-    def __repr__(self):
-        return '<Entity %r>' % self.name
-
-
-class Period(db.Model):
-    tablename = 'Period'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, unique=True, comment='ID периодa')
-    start = db.Column(db.DateTime, comment='Начало периодa')
-    stop = db.Column(db.DateTime, comment='Конец периодa')
-
-    def __repr__(self):
-        return '<Period %r>' % self.id
-
-
-class Period_entity(db.Model):
-    tablename = 'Period_entity'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, unique=True, comment='ID поля')
-    entity_id = db.Column(db.Integer, db.ForeignKey(Entity.id), comment='ID сущности')
-    period_id = db.Column(db.Integer, db.ForeignKey(Period.id), comment='ID периодa')
-
-    def __repr__(self):
-        return '<Period_entity (%r, %r, %r)>' % (
-            self.id, self.entity_id, self.period_id
-        )
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -49,21 +17,25 @@ def index():
     if request.method == 'POST':
 
         start = change_date_to_datetime(request.form['start'])
-        stop = change_date_to_datetime(request.form['stop'])
+        end = change_date_to_datetime(request.form['end'])
+
+        if end < start:
+            return 'конец периода не может быть раньше начала'
+
         name = request.form['name']
         type_entity = request.form['type']
 
         start_unix = change_datetime_to_unix(start)
-        stop_unix = change_datetime_to_unix(stop)
+        end_unix = change_datetime_to_unix(end)
 
-        period = Period(start=start, stop=stop)
+        period = Period(start=start, end=end)
         entity = Entity(name=name, type=type_entity)
 
-        periods = Period.query.filter_by(start=start, stop=stop).all()
+        periods = Period.query.filter_by(start=start, end=end).all()
 
         entities = Entity.query.filter_by(name=name, type=type_entity).all()
 
-        array = array_from_unix_range(start_unix, stop_unix)
+        array = array_from_unix_range(start_unix, end_unix)
         if len(entities):
             period_entiies_for_request = db.session.query(Period_entity).filter(
                 Period_entity.entity_id == entities[0].id).all()
@@ -136,4 +108,5 @@ def response_period(arr):
 
 
 if __name__ == '__main__':
+    db.init_app(app)
     app.run(debug=True)

@@ -13,11 +13,11 @@ def change_datetime_to_unix(arg):
     return arg.replace(tzinfo=timezone.utc).timestamp()
 
 
-def array_from_unix_range(start, stop):
+def array_from_unix_range(start, end):
     arr = [start]
 
     i = start
-    while i < stop:
+    while i < end:
         i = i + MS_FROM_DAY
         arr.append(i)
 
@@ -51,8 +51,8 @@ def get_union_range(arr):
 
     for el in arr:
         start_unix = change_datetime_to_unix(el.start)
-        stop_unix = change_datetime_to_unix(el.stop)
-        newArr = array_from_unix_range(start_unix, stop_unix)
+        end_unix = change_datetime_to_unix(el.end)
+        newArr = array_from_unix_range(start_unix, end_unix)
         array = array + newArr
 
     array_without_duplicates = delete_duplicates(array)
