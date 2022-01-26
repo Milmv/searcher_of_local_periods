@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    </br>
+    <h1>Что нужно запросить</h1>
+    </br>
+    <div class="alert alert-info">
+        {% for el in arr%}
+        <p>{{el}}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
